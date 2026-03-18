@@ -1,0 +1,12 @@
+oc new-project harbor
+
+oc apply -f harbor-scc.yaml
+oc adm policy add-scc-to-user harbor-anyuid-seccomp -z default -n harbor
+
+helm repo add harbor https://helm.goharbor.io
+helm repo update
+
+helm upgrade --install harbor harbor/harbor \
+  -n harbor \
+  -f values-openshift.yaml \
+  --version 1.18.2

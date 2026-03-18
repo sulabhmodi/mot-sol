@@ -1,0 +1,5 @@
+oc create route edge harbor \
+  --service=harbor \
+  --hostname=harbor.apps.cluster.example.com \
+  --port=http \
+  -n harbor

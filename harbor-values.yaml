@@ -1,0 +1,117 @@
+expose:
+  type: clusterIP
+  tls:
+    enabled: false
+  clusterIP:
+    name: harbor
+    ports:
+      httpPort: 80
+      httpsPort: 443
+
+externalURL: https://harbor.apps.cluster.example.com
+
+harborAdminPassword: "Admin1234"
+
+existingSecretAdminPassword: ""
+
+internalTLS:
+  enabled: false
+
+ipFamily:
+  ipv4:
+    enabled: true
+  ipv6:
+    enabled: false
+
+persistence:
+  enabled: true
+  resourcePolicy: "keep"
+  persistentVolumeClaim:
+    registry:
+      existingClaim: ""
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      size: 100Gi
+    jobservice:
+      jobLog:
+        existingClaim: ""
+        storageClass: ""
+        accessMode: ReadWriteOnce
+        size: 5Gi
+    database:
+      existingClaim: ""
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      size: 10Gi
+    redis:
+      existingClaim: ""
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      size: 5Gi
+    trivy:
+      existingClaim: ""
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      size: 10Gi
+
+imageChartStorage:
+  disableredirect: true
+
+notary:
+  enabled: false
+
+trivy:
+  enabled: false
+
+metrics:
+  enabled: false
+
+trace:
+  enabled: false
+
+portal:
+  replicas: 1
+  serviceAccountName: default
+  automountServiceAccountToken: false
+
+core:
+  replicas: 1
+  serviceAccountName: default
+  automountServiceAccountToken: false
+
+jobservice:
+  replicas: 1
+  serviceAccountName: default
+  automountServiceAccountToken: false
+
+registry:
+  serviceAccountName: default
+  automountServiceAccountToken: false
+  registry:
+    serviceAccountName: default
+    automountServiceAccountToken: false
+  controller:
+    serviceAccountName: default
+    automountServiceAccountToken: false
+
+database:
+  type: internal
+  internal:
+    serviceAccountName: default
+    automountServiceAccountToken: false
+
+redis:
+  type: internal
+  internal:
+    serviceAccountName: default
+    automountServiceAccountToken: false
+
+containerSecurityContext:
+  privileged: false
+  allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
+  runAsNonRoot: true
+  capabilities:
+    drop:
+      - ALL
