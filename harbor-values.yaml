@@ -71,39 +71,39 @@ trace:
 
 portal:
   replicas: 1
-  serviceAccountName: default
+  serviceAccountName: harobor-sa
   automountServiceAccountToken: false
 
 core:
   replicas: 1
-  serviceAccountName: default
+  serviceAccountName: harobor-sa
   automountServiceAccountToken: false
 
 jobservice:
   replicas: 1
-  serviceAccountName: default
+  serviceAccountName: harobor-sa
   automountServiceAccountToken: false
 
 registry:
-  serviceAccountName: default
+  serviceAccountName: harobor-sa
   automountServiceAccountToken: false
   registry:
-    serviceAccountName: default
+    serviceAccountName: harobor-sa
     automountServiceAccountToken: false
   controller:
-    serviceAccountName: default
+    serviceAccountName: harobor-sa
     automountServiceAccountToken: false
 
 database:
   type: internal
   internal:
-    serviceAccountName: default
+    serviceAccountName: harobor-sa
     automountServiceAccountToken: false
 
 redis:
   type: internal
   internal:
-    serviceAccountName: default
+    serviceAccountName: harobor-sa
     automountServiceAccountToken: false
 
 containerSecurityContext:
