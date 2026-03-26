@@ -1,0 +1,91 @@
+---
+- name: Configure OpenShift infrastructure to host OpenShift clusters
+  hosts: localhost
+  become: false
+  gather_facts: false
+  vars:
+    harbor_registry: harbor.registry.com
+    harbor_username: "{{ lookup('ansible.builtin.env', 'HARBOR_USERNAME') }}"
+    harbor_password: "{{ lookup('ansible.builtin.env', 'HARBOR_PASSWORD') }}"
+    harbor_auth: "{{ (harbor_username ~ ':' ~ harbor_password) | b64encode }}"
+
+  tasks:
+    - name: Get pull secret from the host cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        name: pull-secret
+        namespace: openshift-config
+      register: _openshift_config_pull_secret
+      failed_when: false
+
+    - name: Check if PULL_SECRET is defined when there is no admin access
+      ansible.builtin.assert:
+        that:
+          - lookup('ansible.builtin.env', 'PULL_SECRET') | length > 0
+        fail_msg: "Cannot import pull-secret from the host cluster. Please define the PULL_SECRET environment variable"
+      when: _openshift_config_pull_secret.failed
+
+    - name: Set base pull secret from cluster
+      ansible.builtin.set_fact:
+        base_pull_secret_json: >-
+          {{
+            _openshift_config_pull_secret.resources[0].data['.dockerconfigjson']
+            | b64decode
+            | from_json
+          }}
+      when:
+        - not _openshift_config_pull_secret.failed
+        - _openshift_config_pull_secret.resources | length > 0
+
+    - name: Set base pull secret from environment variable
+      ansible.builtin.set_fact:
+        base_pull_secret_json: "{{ lookup('ansible.builtin.env', 'PULL_SECRET') | from_json }}"
+      when: _openshift_config_pull_secret.failed
+
+    - name: Validate Harbor credentials
+      ansible.builtin.assert:
+        that:
+          - harbor_username | length > 0
+          - harbor_password | length > 0
+        fail_msg: "HARBOR_USERNAME and HARBOR_PASSWORD must be defined"
+      when: harbor_registry | length > 0
+
+    - name: Merge Harbor auth into pull secret
+      ansible.builtin.set_fact:
+        merged_pull_secret_json: >-
+          {{
+            base_pull_secret_json
+            | combine(
+                {
+                  'auths': (
+                    base_pull_secret_json.auths
+                    | default({})
+                    | combine(
+                        {
+                          harbor_registry: {
+                            'auth': harbor_auth
+                          }
+                        }
+                      )
+                  )
+                },
+                recursive=True
+              )
+          }}
+
+    - name: Render merged pull secret string
+      ansible.builtin.set_fact:
+        merged_pull_secret_str: "{{ merged_pull_secret_json | to_json }}"
+
+    - name: Show the secret
+      ansible.builtin.debug:
+        var: merged_pull_secret_json
+
+    - name: Debug merged pull secret registries
+      ansible.builtin.debug:
+        msg: "{{ merged_pull_secret_json.auths.keys() | list }}"
+
+    - name: Include role to configure host OpenShift cluster objects
+      ansible.builtin.include_role:
+        name: ephemeral_ns
