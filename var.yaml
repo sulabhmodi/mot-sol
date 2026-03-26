@@ -1,0 +1,33 @@
+hosts:
+  control-01.rf4-01.ref.airsys.o2.com:
+    role: master
+    type: vm
+    use_bond: false
+    host_ip: 10.208.236.156
+    root_disk: /dev/sda
+    interfaces:
+      - name: ens192
+        macAddress: 00:50:56:aa:aa:01
+
+  control-02.rf4-01.ref.airsys.o2.com:
+    role: master
+    type: vm
+    use_bond: false
+    host_ip: 10.208.236.157
+    root_disk: /dev/sda
+    interfaces:
+      - name: ens192
+        macAddress: 00:50:56:aa:aa:02
+
+  control-03.rf4-01.ref.airsys.o2.com:
+    role: master
+    type: baremetal
+    use_bond: true
+    host_ip: 10.208.236.158
+    bmc_ip: control-03-ilo.rf4-01.ref.airsys.o2.com
+    root_disk: /dev/disk/by-path/pci-0000:5c:00.0-scsi-0:1:0:0
+    interfaces:
+      - name: ens2f3
+        macAddress: d4:f5:ef:91:50:e3
+      - name: ens3f3
+        macAddress: d4:f5:ef:91:a5:e7

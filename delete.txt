@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pvc-test
+spec:
+  containers:
+    - name: app
+      image: registry.access.redhat.com/ubi9/ubi-minimal
+      command: ["/bin/sh", "-c", "sleep 3600"]
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: nimble-test-pvc
+
+
+
+***************
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fio-test
+spec:
+  containers:
+  - name: fio
+    image: docker.io/openeuler/fio
+    command: ["/bin/sh", "-c", "sleep infinity"]
+    volumeMounts:
+    - mountPath: /data
+      name: testvol
+  volumes:
+  - name: testvol
+    persistentVolumeClaim:
+      claimName: fio-test-pvc
+  restartPolicy: Never
+oc apply -f fio-pod.yaml
+Verify 
+
+************
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fio-test-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-csi
+  resources:
+    requests:
+      storage: 5Gi
+
+oc get pods
+Running
+Exec the pod 
+
+
+
+oc rsh fio-test
+FIO Test Scenarios
+
+Sequential Write Test: Tests large block write throughput.
+
+
+
+fio --name=seqwrite \
+    --directory=/data \
+    --size=1G \
+    --bs=1M \
+    --rw=write \
+    --ioengine=libaio \
+    --direct=1 \
+    --numjobs=1 \
+    --runtime=60 \
+    --group_reporting
+What to check:
+
+Bandwidth (MiB/s)
+
+Average latency
+
+Sequential Read Test
+
+
+
+fio --name=seqread \
+    --directory=/data \
+    --size=1G \
+    --bs=1M \
+    --rw=read \
+    --ioengine=libaio \
+    --direct=1 \
+    --numjobs=1 \
+    --runtime=60 \
+    --group_reporting
+Random 4K Write (Critical for PostgreSQL)
+
+
+
+fio --name=randwrite \
+    --directory=/data \
+    --size=1G \
+    --bs=4k \
+    --rw=randwrite \
+    --ioengine=libaio \
+    --direct=1 \
+    --numjobs=4 \
+    --runtime=60 \
+    --group_reporting
+Key metrics:
+

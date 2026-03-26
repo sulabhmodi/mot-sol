@@ -1,0 +1,15 @@
+{
+  "ignition": {
+    "version": "3.2.0"
+  },
+  "passwd": {
+    "users": [
+      {
+        "name": "core",
+        "sshAuthorizedKeys": [
+          "ssh-rsa AAAAB3...your-public-key..."
+        ]
+      }
+    ]
+  }
+}

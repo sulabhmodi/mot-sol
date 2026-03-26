@@ -1,0 +1,152 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: rhel-test-vm
+spec:
+  running: true
+  dataVolumeTemplates:
+    - metadata:
+        name: rhel-rootdisk
+      spec:
+        source:
+          http:
+            url: "https://download.fedoraproject.org/pub/fedora/linux/releases/39/Cloud/x86_64/images/Fedora-Cloud-Base-39-1.5.x86_64.qcow2"
+        storage:
+          storageClassName: hpe-nimble
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: rhel-test-vm
+    spec:
+      domain:
+        cpu:
+          cores: 2
+        resources:
+          requests:
+            memory: 2Gi
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+          interfaces:
+            - name: default
+              masquerade: {}
+            - name: vlan20
+              bridge: {}
+      networks:
+        - name: default
+          pod: {}
+        - name: vlan20
+          multus:
+            networkName: default/vlan20-net
+      volumes:
+        - name: rootdisk
+          dataVolume:
+            name: rhel-rootdisk
+
+
+*********************
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: nimble-vlan20-testvm
+  namespace: default
+spec:
+  running: true
+  dataVolumeTemplates:
+    - metadata:
+        name: nimble-vlan20-testvm-rootdisk
+      spec:
+        source:
+          http:
+            url: "https://download.fedoraproject.org/pub/fedora/linux/releases/39/Cloud/x86_64/images/Fedora-Cloud-Base-39-1.5.x86_64.qcow2"
+        storage:
+          storageClassName: hpe-nimble
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+    - metadata:
+        name: nimble-vlan20-testvm-datadisk
+      spec:
+        source:
+          blank: {}
+        storage:
+          storageClassName: hpe-nimble
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 50Gi
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: nimble-vlan20-testvm
+    spec:
+      domain:
+        cpu:
+          cores: 2
+        resources:
+          requests:
+            memory: 4Gi
+        devices:
+          interfaces:
+            - name: default
+              masquerade: {}
+            - name: vlan20
+              bridge: {}
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+            - name: datadisk
+              disk:
+                bus: virtio
+            - name: cloudinitdisk
+              disk:
+                bus: virtio
+      networks:
+        - name: default
+          pod: {}
+        - name: vlan20
+          multus:
+            networkName: default/vlan20-net
+      volumes:
+        - name: rootdisk
+          dataVolume:
+            name: nimble-vlan20-testvm-rootdisk
+        - name: datadisk
+          dataVolume:
+            name: nimble-vlan20-testvm-datadisk
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              user: fedora
+              password: fedora
+              chpasswd: { expire: False }
+              ssh_pwauth: True
+              write_files:
+                - path: /root/prepare-fio.sh
+                  permissions: '0755'
+                  content: |
+                    #!/bin/bash
+                    set -eux
+                    dnf install -y fio xfsprogs
+                    if ! blkid /dev/vdb; then
+                      mkfs.xfs -f /dev/vdb
+                    fi
+                    mkdir -p /data
+                    grep -q /data /etc/fstab || echo '/dev/vdb /data xfs defaults 0 0' >> /etc/fstab
+                    mount -a
+              runcmd:
+                - nmcli con mod "System eth1" ipv4.addresses 192.168.20.50/24 ipv4.gateway 192.168.20.1 ipv4.method manual
+                - nmcli con up "System eth1" || true
+                - bash /root/prepare-fio.sh
